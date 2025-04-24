@@ -171,7 +171,7 @@ startIdxCH2_Fine = lagsCH2(maxidxCH2)/interp_factor; % Sub-Sample Delay Estimati
 
 % Known System Delay Compensation (in samples)
 systemDelaySamplesCH1 = 42;
-systemDelaySamplesCH2 = 41;
+systemDelaySamplesCH2 = 42;
 
 % Ensures both channels are aligned even if index starts differently (If Calibrating comment out)
 %if startIdxCH1 <= systemDelaySamplesCH1
@@ -209,7 +209,6 @@ fprintf('StartIdx CH1 (Coarse): %.3f samples | Delay: %.3f ns\n', startIdxCH1_Co
 fprintf('StartIdx CH2 (Coarse): %.3f samples | Delay: %.3f ns\n', startIdxCH2_Coarse, tdCH2_Coarse * 1e9);
 fprintf('StartIdx CH1   (Fine): %.3f samples | Delay: %.3f ns\n', startIdxCH1_Fine, tdCH1_Fine * 1e9);
 fprintf('StartIdx CH2   (Fine): %.3f samples | Delay: %.3f ns\n', startIdxCH2_Fine, tdCH2_Fine * 1e9);
-fprintf('System Delay      CH1: %.3f ns     | CH2:   %.3f ns\n', systemDelayCH1_Coarse*1e9, systemDelayCH2_Coarse*1e9);
 fprintf('Phase Difference:      %.2f deg   | Time Delay: %.3f ns\n', phi_diff_deg, td_Phase * 1e9);
 
 %% Final Delay Estimation (Subtract System Delay AND Phase Correction)
@@ -219,15 +218,7 @@ tdCoarse_avg = (tdCH1_Coarse + tdCH2_Coarse)/2;
 tdFine_avg = (tdCH1_Fine + tdCH2_Fine)/2;
 tdCH1_total = tdCH1_Coarse + tdCH1_Fine;
 tdCH2_total = tdCH2_Coarse + tdCH2_Fine;
-td = (tdCoarse_avg + tdFine_avg)/2;
-
-%if tdCoarse_avg > tdFine_avg
-%    td = tdFine_avg;
-%elseif tdFine_avg > tdCoarse_avg
-%    td = tdCoarse_avg;
-%else
-%    td = (tdCoarse_avg + tdFine_avg)/2;
-%end
+td = tdFine_avg;
 
 % Range Calculation
 c = physconst('LightSpeed');
@@ -239,21 +230,26 @@ rangeCH1_Fine = tdCH1_Fine * c / 2;
 rangeCH2_Fine = tdCH2_Fine * c / 2;
 range_Fine = tdFine_avg * c / 2;
 rangeFine_ft = range_Fine * 3.28084;
-range = td * c / 2;
-range_ft = range * 3.28084;
+range_td = td * c / 2;
+range_td_ft = range_td * 3.28084;
 
 % Display Results
-fprintf('\nFinal Range and Delay Estimation Results (Corrected):\n');
+fprintf('\nChannel 1 - Range and Delay:\n');
 fprintf('----------------------------------------------------------\n');
 fprintf('CH1 Delay (Corrected): %.3f ns | Range: %.3f m (%.3f ft)\n', tdCH1_Coarse*1e9, rangeCH1_Coarse, rangeCH1_Coarse*3.28084);
 fprintf('CH2 Delay (Corrected): %.3f ns | Range: %.3f m (%.3f ft)\n', tdCH2_Coarse*1e9, rangeCH2_Coarse, rangeCH2_Coarse*3.28084);
 fprintf('Averaged Delay: %.3f ns | Estimated Range: %.3f m (%.3f ft)\n', tdCoarse_avg*1e9, range_Coarse, rangeCoarse_ft);
 fprintf('----------------------------------------------------------\n');
+fprintf('\nChannel 2 - Range and Delay:\n');
+fprintf('----------------------------------------------------------\n');
 fprintf('CH1 Delay (Corrected): %.3f ns | Range: %.3f m (%.3f ft)\n', tdCH1_Fine*1e9, rangeCH1_Fine, rangeCH1_Fine*3.28084);
 fprintf('CH2 Delay (Corrected): %.3f ns | Range: %.3f m (%.3f ft)\n', tdCH2_Fine*1e9, rangeCH2_Fine, rangeCH2_Fine*3.28084);
 fprintf('Averaged Delay: %.3f ns | Estimated Range: %.3f m (%.3f ft)\n', tdFine_avg*1e9, range_Fine, rangeFine_ft);
 fprintf('----------------------------------------------------------\n');
-fprintf('Final Delay: %.3f ns | Estimated Range: %.3f m (%.3f ft)\n', td*1e9, range, range_ft);
+
+fprintf('\nFinal Results - Range and Delay:\n');
+fprintf('----------------------------------------------------------\n');
+fprintf('Final Delay: %.3f ns | Estimated Range: %.3f m (%.3f ft)\n', td*1e9, range_td, range_td_ft);
 
 %% Obtain Beat Frequencies
 % The beat signal is extracted from the complex signals. By taking the
@@ -414,14 +410,17 @@ fprintf('Upper Beat Frequency: %.2f Hz\n', BeatFrequencyUpper);
 fprintf('Lower Beat Frequency: %.2f Hz\n', BeatFrequencyLower);
 
 tau_from_fb = fb / u;           % time delay (seconds)
-range_from_fb = (c * tau_from_fb) / 2;  % one-way range (meters)
-range_from_fb_ft = range_from_fb * 3.28084; % convert to feet
+range_fb = (c * tau_from_fb) / 2;  % one-way range (meters)
+range_fb_ft = range_fb * 3.28084; % convert to feet
+
+range = (range_fb + range_td)/2;
+range_ft = range * 3.28084; % convert to feet
 
 fprintf('\nRange from Beat Frequency (Delay from Frequency Domain):\n');
 fprintf('----------------------------------------------------------\n');
 fprintf('Beat Frequency: %.3f kHz\n', fb * 1e-3);
 fprintf('Estimated Time Delay: %.3f ns\n', tau_from_fb * 1e9);
-fprintf('Estimated Range: %.3f m (%.3f ft)\n', range_from_fb, range_from_fb_ft);
+fprintf('Estimated Range: %.3f m (%.3f ft)\n', range, range_ft);
 
 %% Doppler and Velocity Estimation
 fb_doppler = abs(BeatFrequencyUpper);  % Use upper for Doppler sense
@@ -432,7 +431,7 @@ fprintf('\nRadar Measurement Results:\n');
 fprintf('----------------------------\n');
 fprintf('Estimated Beat Frequency: %.2f kHz\n', fb * 1e-3);
 fprintf('Estimated Doppler Frequency: %.2f Hz\n', fd);
-fprintf('Estimated Range: %.2f m (%.2f ft)\n', range_from_fb, range_from_fb_ft);
+fprintf('Estimated Range: %.2f m (%.2f ft)\n', range_fb, range_fb_ft);
 fprintf('Estimated Velocity: %.2f m/s\n', velocity);
 fprintf('Estimated Angle: %.2f degrees\n', AoA);
 fprintf('----------------------------\n');
@@ -464,10 +463,10 @@ intensityKernel = intensityKernel / max(intensityKernel(:));  % normalize peak t
 
 % Find location for time-domain estimated range
 [~, angleIdx1] = min(abs(thetaScan - AoA)); % Location on x axis
-[~, rangeIdx1] = min(abs(range_axis - range_ft)); % Location on y axis
+[~, rangeIdx1] = min(abs(range_axis - range_td_ft)); % Location on y axis
 
 % Find location for frequency-domain estimated range
-[~, rangeIdx2] = min(abs(range_axis - range_from_fb_ft));
+[~, rangeIdx2] = min(abs(range_axis - range_fb_ft));
 [~, angleIdx2] = min(abs(thetaScan - AoA)); % Same AoA
 
 % Place both kernels
