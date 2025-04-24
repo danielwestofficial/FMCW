@@ -34,8 +34,9 @@ subplot(2,2,1);
 plot(t, real(sti(:,1)), 'b', t, imag(sti(:,1)), 'r');
 title('Chirp Signal - TX1');
 xlabel('Time (s)');
-xlim([0 30e-6]);
+xlim([0 10e-6]);
 ylabel('Amplitude');
+ylim([-1 1]);
 legend('Real Part', 'Imaginary Part');
 grid on;
 
@@ -43,8 +44,9 @@ subplot(2,2,2);
 plot(t, real(sti(:,2)), 'b', t, imag(sti(:,2)), 'r');
 title('Chirp Signal - TX2');
 xlabel('Time (s)');
-xlim([0 30e-6]);
+xlim([0 10e-6]);
 ylabel('Amplitude');
+ylim([-1 1]);
 legend('Real Part', 'Imaginary Part');
 grid on;
 
@@ -52,8 +54,9 @@ subplot(2,2,3);
 plot(t, real(sri(:,1)), 'b', t, imag(sri(:,1)), 'r');
 title('Chirp Signal - RX1');
 xlabel('Time (s)');
-xlim([0 30e-6]);
+xlim([0 10e-6]);
 ylabel('Amplitude');
+ylim([-1 1]);
 legend('Real Part', 'Imaginary Part');
 grid on;
 
@@ -61,41 +64,14 @@ subplot(2,2,4);
 plot(t, real(sri(:,2)), 'b', t, imag(sri(:,2)), 'r');
 title('Chirp Signal - RX2');
 xlabel('Time (s)');
-xlim([0 20e-6]);
+xlim([0 10e-6]);
 ylabel('Amplitude');
+ylim([-1 1]);
 legend('Real Part', 'Imaginary Part');
 grid on;
 
 %% FFT TX vs RX
 % Chirp vs. Received 
-
-N = length(sri(:,1));                   % Number of samples
-X = fftshift(abs(fft(sri(:,1), N)));    % Compute the shifted FFT
-f = linspace(-Fs/2,Fs/2,N);             % Frequency axis centered -Fs/2 to Fs/2
-f = f + (frequencyStart);               % Shift to carrier frequency (Hz)
-
-
-figure('Color', [1 1 1]);
-subplot(2,1,1);
-plot(f / 1e9, abs(X) / max(abs(X))); % Normalize and scale to GHz
-title('FFT Spectrum - TX1');
-xlabel('Frequency (GHz)');
-xlim([2.4 2.5]);
-ylabel('Normalized Magnitude');
-grid on;
-
-N = length(sri(:,1));                   % Number of samples
-X = fftshift(abs(fft(sri(:,1), N)));    % Compute the shifted FFT
-f = linspace(-Fs/2,Fs/2,N);             % Frequency axis centered -Fs/2 to Fs/2
-f = f + (frequencyStart);               % Shift to carrier frequency (Hz)
-
-subplot(2,1,2);
-plot(f / 1e9, abs(X) / max(abs(X))); % Normalize and scale to GHz
-title('FFT Spectrum - RX1');
-xlabel('Frequency (GHz)');
-%xlim([2.447 2.453]);
-ylabel('Normalized Magnitude');
-grid on;
 
 N = length(sti(:,1));                   % Number of samples
 X = fftshift(abs(fft(sti(:,1), N)));    % Compute the shifted FFT
@@ -107,8 +83,9 @@ subplot(2,2,1);
 plot(f / 1e9, abs(X) / max(abs(X))); % Normalize and scale to GHz
 title('FFT Spectrum - TX1');
 xlabel('Frequency (GHz)');
-%xlim([2.447 2.453]);
+xlim([2.435 2.465]);
 ylabel('Normalized Magnitude');
+ylim([0 1]);
 grid on;
 
 N = length(sti(:,2));                   % Number of samples
@@ -120,8 +97,9 @@ subplot(2,2,3);
 plot(f / 1e9, abs(X) / max(abs(X))); % Normalize and scale to GHz
 title('FFT Spectrum - RX1');
 xlabel('Frequency (GHz)');
-%xlim([2.447 2.453]);
+xlim([2.435 2.465]);
 ylabel('Normalized Magnitude');
+ylim([0 1]);
 grid on;
 
 N = length(sri(:,1));                   % Number of samples
@@ -133,8 +111,9 @@ subplot(2,2,2);
 plot(f / 1e9, abs(X) / max(abs(X))); % Normalize and scale to GHz
 title('FFT Spectrum - TX2');
 xlabel('Frequency (GHz)');
-%xlim([2.447 2.453]);
+xlim([2.435 2.465]);
 ylabel('Normalized Magnitude');
+ylim([0 1]);
 grid on;
 
 N = length(sri(:,2));                   % Number of samples
@@ -146,8 +125,9 @@ subplot(2,2,4);
 plot(f / 1e9, abs(X) / max(abs(X))); % Normalize and scale to GHz
 title('FFT Spectrum - RX2');
 xlabel('Frequency (GHz)');
-%xlim([2.447 2.453]);
+xlim([2.435 2.465]);
 ylabel('Normalized Magnitude');
+ylim([0 1]);
 grid on;
 
 %% SYSTEM DELAY Estimation 
@@ -241,6 +221,14 @@ tdCH1_total = tdCH1_Coarse + tdCH1_Fine;
 tdCH2_total = tdCH2_Coarse + tdCH2_Fine;
 td = (tdCoarse_avg + tdFine_avg)/2;
 
+%if tdCoarse_avg > tdFine_avg
+%    td = tdFine_avg;
+%elseif tdFine_avg > tdCoarse_avg
+%    td = tdCoarse_avg;
+%else
+%    td = (tdCoarse_avg + tdFine_avg)/2;
+%end
+
 % Range Calculation
 c = physconst('LightSpeed');
 rangeCH1_Coarse = tdCH1_Coarse * c / 2;
@@ -274,48 +262,14 @@ fprintf('Final Delay: %.3f ns | Estimated Range: %.3f m (%.3f ft)\n', td*1e9, ra
 beatSignal1 = sti(:,1) .* conj(sri(:,1)); 
 beatSignal2 = sti(:,2) .* conj(sri(:,2));
 
-tau_system1 = (startIdxCH1_Coarse + tdCH1_Fine) / Fs;
-tau_system2 = (startIdxCH2_Coarse + tdCH2_Fine) / Fs;
+tau_system1 = (startIdxCH1_Coarse) / Fs + tdCH1_Fine;
+tau_system2 = (startIdxCH2_Coarse) / Fs + tdCH2_Fine;
 
 t = (0:length(beatSignal1)-1).' / Fs;
 
 % Time-domain delay removal
 beatSignal1 = beatSignal1 .* exp(-1j * 2 * pi * u * t * tau_system1);
 beatSignal2 = beatSignal2 .* exp(-1j * 2 * pi * u * t * tau_system2);
-
-
-%% Filter Beat Signals (Anti-Aliasing Filter before Downsampling)
-% The beat signal is filtered before being downsampled. Knowing that the
-% algorithm will be downsampled we can prevent aliasing by first selecting
-% a desired downsample rate. The frequency cutoff is 500 kHz and is
-% acheived through a 4th order elliptic low-pass filter, with 0.1 passband
-% ripple and 80 dB stopband attenuation. 
-
-% Specifications
-%desiredFs = 30e6; % Target downsampled rate (e.g., 1 MHz)
-%fc = 0.5 * desiredFs; % Set cutoff frequency to half the desired downsampling rate (Shannon-Nyquist Theorem)
-%wc = fc / (Fs / 2);   % Normalize the cutoff frequency to the original sampling rate
-%[B, A] = ellip(4, 0.1, 80, wc, 'low'); % Design a 4th-order elliptic low-pass filter
-%freqz(B, A, 1024, Fs);  % Frequency response
-%beatSignal1Filtered = filtfilt(B,A,beatSignal1); % Anti-aliasing filter without phase delay (filtfilt)
-%beatSignal2Filtered = filtfilt(B,A,beatSignal2);
-
-%% Downsample Beat Signals
-%downconversion = round(Fs / desiredFs);                                     % Downconversion factor
-%beatSignal1Downsampled = downsample(beatSignal1Filtered, downconversion);   % Downsampled beat signal 1
-%beatSignal2Downsampled = downsample(beatSignal2Filtered, downconversion);   % Downsampled beat signal 1
-%tRXdownsampled = downsample(t, downconversion);    % Downsampled time vector
-%FsDown = Fs / downconversion;                               % Reduced sampling rate
-
-% Plot beat signals
-%figure('Color', [1 1 1]);
-%plot(tRXdownsampled, real(beatSignal1Downsampled), 'r',tRXdownsampled, real(beatSignal2Downsampled), 'b');
-%title('Filtered Beat Signal');
-%xlabel('Time (s)');
-%xlim([0 2e-6]);
-%ylabel('Amplitude');
-%legend({'beatSignal1Downsampled','beatSignal2Downsampled'},'Location','northeast');
-%grid on;
 
 %% FFT Processing
 % The Fast Fourier Transform is performed on the downsmapled beat signal. 
@@ -335,7 +289,7 @@ title('Beat Frequency Spectrum - Element 1');
 xlabel('Frequency (MHz)');
 xlim([-5 5]);
 ylabel('Magnitude (dB)');
-ylim([-40 40]);
+ylim([-10 60]);
 grid on;
 subplot(2,1,2);
 plot(f/1e6, 20*log10(abs(beatFFT2)));                  
@@ -343,26 +297,7 @@ title('Beat Frequency Spectrum - Element 2');
 xlabel('Frequency (MHz)');
 xlim([-5 5]);
 ylabel('Magnitude (dB)');
-ylim([-40 40]);
-grid on;
-
-% Plot Spectrums
-figure('Color', [1 1 1]);
-subplot(2,1,1);
-plot(f/1e6, 20*log10(abs(beatFFT1)));                   % Plot in MHz
-title('Beat Frequency Spectrum - Element 1');
-xlabel('Frequency (MHz)');
-xlim([-5 5]);
-ylabel('Magnitude (dB)');
-ylim([-40 40]);
-grid on;
-subplot(2,1,2);
-plot(f/1e6, 20*log10(abs(beatFFT2)));                  
-title('Beat Frequency Spectrum - Element 2');
-xlabel('Frequency (MHz)');
-xlim([-5 5]);
-ylabel('Magnitude (dB)');
-ylim([-40 40]);
+ylim([-10 60]);
 grid on;
 
 %% MUSIC Algorithm for DOA Estimation
@@ -429,16 +364,13 @@ figure('Color', [1 1 1]);
 plot(thetaScan, 10*log10(Pmusic)); 
 title('MUSIC Spectrum for DOA Estimation');
 xlabel('Angle (degrees)');
-xlim([-100 100]);
+xlim([-90 90]);
 ylabel('Normalized Power (dB)');
-ylim([-170 20]);
+ylim([-80 20]);
 grid on;
 
 % Find peaks in MUSIC spectrum
 [pks, locs] = findpeaks(10*log10(Pmusic), thetaScan);   % Find peaks in the MUSIC spectrum
-
-% Find peaks in MUSIC spectrum
-[pks, locs] = findpeaks(10*log10(Pmusic), thetaScan);
 
 if ~isempty(locs)
     AoA = locs(1);           % Take first peak
@@ -446,7 +378,7 @@ if ~isempty(locs)
 
     % Add peak annotation to the plot
     hold on;
-    plot(AoA, pk_val, 'ro', 'MarkerSize', 10, 'LineWidth', 2);
+    plot(AoA, pk_val, 'r.', 'MarkerSize', 20);
     text(AoA, pk_val, [' ' num2str(AoA, '%.1f') '°'], ...
         'VerticalAlignment', 'bottom', 'Color', 'r');
     hold off;
@@ -530,15 +462,30 @@ sigma = kernelSize / 9;   % controls the spread of intensity
 intensityKernel = exp(-(x.^2 + y.^2) / (2 * sigma^2)); % Gaussian kernel function
 intensityKernel = intensityKernel / max(intensityKernel(:));  % normalize peak to 1
 
+% Find location for time-domain estimated range
 [~, angleIdx1] = min(abs(thetaScan - AoA)); % Location on x axis
 [~, rangeIdx1] = min(abs(range_axis - range_ft)); % Location on y axis
 
+% Find location for frequency-domain estimated range
+[~, rangeIdx2] = min(abs(range_axis - range_from_fb_ft));
+[~, angleIdx2] = min(abs(thetaScan - AoA)); % Same AoA
+
+% Place both kernels
 for i = -halfSize:halfSize
     for j = -halfSize:halfSize
-        ri = rangeIdx1 + i; % range index
-        ai = angleIdx1 + j; % angle index
-        if ri > 0 && ri <= size(TargetMap, 1) && ai > 0 && ai <= size(TargetMap, 2)
-            TargetMap(ri, ai) = intensityKernel(i + halfSize + 1, j + halfSize + 1);
+        
+        % Time-domain kernel
+        ri1 = rangeIdx1 + i;
+        ai1 = angleIdx1 + j;
+        if ri1 > 0 && ri1 <= size(TargetMap, 1) && ai1 > 0 && ai1 <= size(TargetMap, 2)
+            TargetMap(ri1, ai1) = TargetMap(ri1, ai1) + intensityKernel(i + halfSize + 1, j + halfSize + 1); % weight = 0.8
+        end
+
+        % Frequency-domain kernel
+        ri2 = rangeIdx2 + i;
+        ai2 = angleIdx2 + j;
+        if ri2 > 0 && ri2 <= size(TargetMap, 1) && ai2 > 0 && ai2 <= size(TargetMap, 2)
+            TargetMap(ri2, ai2) = TargetMap(ri2, ai2) + intensityKernel(i + halfSize + 1, j + halfSize + 1); % weight = 0.6
         end
     end
 end
@@ -552,6 +499,7 @@ title('Range vs AoA Heatmap');
 axis xy; % Y axis goes from bottom to top
 colormap(jet); % color - blue(low) to red(high)
 colorbar; % shows intensity scale
-caxis([0 1]); % Forces max intensity
+clim([0 1]); % Forces max intensity
 grid on;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
