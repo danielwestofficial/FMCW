@@ -1,0 +1,48 @@
+# RX SDR = Serial # 7789a9fc1f6546a2afee954ff6fe0782 
+
+# run C:\Users\danie\OneDrive\Documents\OIT(WINTER.2025)\ENGR596\Week9\slave.txt
+
+# The slave.txt file contains the following contents
+
+set frequency rx1 2.45e9
+set frequency rx2 2.45e9
+set samplerate rx1 60e6
+set samplerate rx2 60e6
+set bandwidth rx1 30e6
+set bandwidth rx2 30e6
+
+set biastee rx1 off
+set biastee rx2 off
+print hardware
+
+set agc off
+set gain rx1 30
+set gain rx2 30
+
+rx config buffers=128  # Default buffers=32 samples=131072 xfers=64
+rx config file=R:\Temp\receive.sc16q11 format=bin n=10M timeout=120s
+rx config
+
+# Apply reference clock (Refer to https://github-wiki-see.page/m/freqyXin/bladeRF/wiki/Taming-Your-VCTCXO)
+set clock_ref enable
+set refin_freq 10M
+print clock_ref
+
+# Use reference clock input from master.
+# This assumes the master is already outputting this reference.
+set clock_sel onboard
+print clock_sel
+
+# Arm the trigger
+trigger j51-1 rx slave
+
+# Start streaming sampling 
+rx start
+
+# Inform user how to fire trigger
+echo "  ---------------------------------------------------------------"
+echo "   Ready. Fire the trigger on the master device."
+echo "  ---------------------------------------------------------------"
+
+# Wait for the RX to complete and then finish up.
+rx wait

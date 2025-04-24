@@ -1,0 +1,49 @@
+# TX SDR = Serial # 608d18b0188c4e662341f2b1ec1dc2a 
+
+# run C:\Users\danie\OneDrive\Documents\OIT(WINTER.2025)\ENGR596\Week9\master.txt
+
+# The master.txt file contains the following contents
+
+set frequency tx1 2.45e9
+set frequency tx2 2.45e9
+set samplerate tx1 60e6
+set samplerate tx2 60e6
+set bandwidth tx1 30e6
+set bandwidth tx2 30e6
+
+set biastee tx1 off
+set biastee tx2 off
+print hardware
+
+set gain tx1 30
+set gain tx2 30
+
+tx config buffers=128    # Default buffers=32 samples=131072 xfers=64
+tx config file=R:\Temp\transmit.sc16q11 format=bin timeout=120s
+tx config
+
+# Apply reference clock (Refer to https://github-wiki-see.page/m/freqyXin/bladeRF/wiki/Taming-Your-VCTCXO)
+set clock_ref enable
+set refin_freq 10M
+print clock_ref
+
+# Ensure clock source is onboard reference clock
+set clock_sel onboard
+print clock_sel
+
+# Output reference clock
+set clock_out disable
+print clock_out
+
+# Arm the triggers
+trigger j51-1 tx master
+
+# Start streaming sampling 
+tx start
+
+# Inform user how to fire trigger
+echo "  ---------------------------------------------------------------"
+echo "   Run the slave.txt script in another terminal."
+echo "   Then, run 'trigger j51-1 tx fire' to fire trigger."
+echo "  ---------------------------------------------------------------"
+echo ""
