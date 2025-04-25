@@ -173,7 +173,6 @@ startIdxCH2_Fine = lagsCH2(maxidxCH2)/interp_factor; % Sub-Sample Delay Estimati
 % Known System Delay Compensation (in samples)
 systemDelaySamplesCH1 = 42;
 systemDelaySamplesCH2 = 41;
-
 systemDelayCH1_Coarse = systemDelaySamplesCH1 / Fs;
 systemDelayCH2_Coarse = systemDelaySamplesCH2 / Fs;
 
@@ -519,4 +518,3 @@ colorbar; % shows intensity scale
 clim([0 1]); % Forces max intensity
 grid on;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
