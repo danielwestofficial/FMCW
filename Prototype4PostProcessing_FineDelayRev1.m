@@ -12,11 +12,12 @@ BW = 30e6;
 frequencyStart = 2.45e9 - BW/2;
 frequencyEnd = 2.45e9 + BW/2;
 fo = (frequencyStart + frequencyEnd)/2;
+
 tau =10e-6;
 u = BW / tau;
 
-sti = load_sc16q11_MIMO('R:\Temp\transmit.sc16q11', 2);
-sri = load_sc16q11_MIMO('R:\Temp\receive.sc16q11', 2);
+sti = load_sc16q11_MIMO('R:\Temp\transmit12.sc16q11', 2);
+sri = load_sc16q11_MIMO('R:\Temp\receive12.sc16q11', 2);
 
 % Align samples 
 if length(sti) > length(sri)
@@ -171,20 +172,7 @@ startIdxCH2_Fine = lagsCH2(maxidxCH2)/interp_factor; % Sub-Sample Delay Estimati
 
 % Known System Delay Compensation (in samples)
 systemDelaySamplesCH1 = 42;
-systemDelaySamplesCH2 = 42;
-
-% Ensures both channels are aligned even if index starts differently (If Calibrating comment out)
-%if startIdxCH1 <= systemDelaySamplesCH1
-%    systemDelaySamplesCH1 = systemDelaySamplesCH1 - 1;
-%else startIdxCH1 > systemDelaySamplesCH1;
-%    systemDelaySamplesCH1 = systemDelaySamplesCH1;
-%end
-
-%if startIdxCH2 <= systemDelaySamplesCH2
-%    systemDelaySamplesCH2 = systemDelaySamplesCH2 - 1;
-%else startIdxCH2 > systemDelaySamplesCH2
-%    systemDelaySamplesCH2 = systemDelaySamplesCH2;
-%end
+systemDelaySamplesCH2 = 41;
 
 systemDelayCH1_Coarse = systemDelaySamplesCH1 / Fs;
 systemDelayCH2_Coarse = systemDelaySamplesCH2 / Fs;
@@ -212,18 +200,19 @@ fprintf('StartIdx CH2   (Fine): %.3f samples | Delay: %.3f ns\n', startIdxCH2_Fi
 fprintf('Phase Difference:      %.2f deg   | Time Delay: %.3f ns\n', phi_diff_deg, td_Phase * 1e9);
 
 %% Final Delay Estimation (Subtract System Delay AND Phase Correction)
-tdCH1_Coarse = tdCH1_Coarse - systemDelayCH1_Coarse - td_Phase;
-tdCH2_Coarse = tdCH2_Coarse - systemDelayCH2_Coarse - td_Phase;
-tdCoarse_avg = (tdCH1_Coarse + tdCH2_Coarse)/2;
+tdCH1_System = tdCH1_Coarse - systemDelayCH1_Coarse - td_Phase;
+tdCH2_System = tdCH2_Coarse - systemDelayCH2_Coarse - td_Phase;
+tdCoarse_avg = (tdCH1_System + tdCH2_System)/2;
 tdFine_avg = (tdCH1_Fine + tdCH2_Fine)/2;
 tdCH1_total = tdCH1_Coarse + tdCH1_Fine;
 tdCH2_total = tdCH2_Coarse + tdCH2_Fine;
-td = tdFine_avg;
+%td = (tdCoarse_avg + tdFine_avg)/2; % This line is for calibrating with 1ft sample
+td = tdCoarse_avg + tdFine_avg;
 
 % Range Calculation
 c = physconst('LightSpeed');
-rangeCH1_Coarse = tdCH1_Coarse * c / 2;
-rangeCH2_Coarse = tdCH2_Coarse * c / 2;
+rangeCH1_Coarse = tdCH1_System * c / 2;
+rangeCH2_Coarse = tdCH2_System * c / 2;
 range_Coarse = tdCoarse_avg * c / 2;
 rangeCoarse_ft = range_Coarse * 3.28084;
 rangeCH1_Fine = tdCH1_Fine * c / 2;
@@ -258,14 +247,23 @@ fprintf('Final Delay: %.3f ns | Estimated Range: %.3f m (%.3f ft)\n', td*1e9, ra
 beatSignal1 = sti(:,1) .* conj(sri(:,1)); 
 beatSignal2 = sti(:,2) .* conj(sri(:,2));
 
-tau_system1 = (startIdxCH1_Coarse) / Fs + tdCH1_Fine;
-tau_system2 = (startIdxCH2_Coarse) / Fs + tdCH2_Fine;
+%td_residual = Ts - abs(td_Phase) - tdCH1_Fine;        % Attemots to account for residual fine delay errors
+%tau_system1 = systemDelaySamplesCH1/Fs - td_residual;
+%tau_system2 = systemDelaySamplesCH2/Fs - td_residual;
+
+tau_system1 = systemDelaySamplesCH1/Fs - 1.1295e-08; % Most accurate 
+tau_system2 = systemDelaySamplesCH2/Fs - 1.1295e-08;
+
+%tau_system1 = (startIdxCH1_Coarse) / Fs + tdCH1_Fine; % These two line are needed when calibrating with 1 ft loopback test 
+%tau_system2 = (startIdxCH2_Coarse) / Fs + tdCH2_Fine; %
 
 t = (0:length(beatSignal1)-1).' / Fs;
 
 % Time-domain delay removal
 beatSignal1 = beatSignal1 .* exp(-1j * 2 * pi * u * t * tau_system1);
 beatSignal2 = beatSignal2 .* exp(-1j * 2 * pi * u * t * tau_system2);
+
+
 
 %% FFT Processing
 % The Fast Fourier Transform is performed on the downsmapled beat signal. 
@@ -409,7 +407,7 @@ end
 fprintf('Upper Beat Frequency: %.2f Hz\n', BeatFrequencyUpper);
 fprintf('Lower Beat Frequency: %.2f Hz\n', BeatFrequencyLower);
 
-tau_from_fb = fb / u;           % time delay (seconds)
+tau_from_fb = fb / u;              % time delay (seconds)
 range_fb = (c * tau_from_fb) / 2;  % one-way range (meters)
 range_fb_ft = range_fb * 3.28084; % convert to feet
 
@@ -420,10 +418,18 @@ fprintf('\nRange from Beat Frequency (Delay from Frequency Domain):\n');
 fprintf('----------------------------------------------------------\n');
 fprintf('Beat Frequency: %.3f kHz\n', fb * 1e-3);
 fprintf('Estimated Time Delay: %.3f ns\n', tau_from_fb * 1e9);
-fprintf('Estimated Range: %.3f m (%.3f ft)\n', range, range_ft);
+fprintf('Estimated Range: %.3f m (%.3f ft)\n', range_fb, range_fb_ft);
 
 %% Doppler and Velocity Estimation
-fb_doppler = abs(BeatFrequencyUpper);  % Use upper for Doppler sense
+
+% Choose the stronger peak
+if fb == BeatFrequencyLower
+    fb_doppler = abs(BeatFrequencyUpper);
+else
+    fb_doppler = abs(BeatFrequencyLower);
+end
+
+%fb_doppler = abs(BeatFrequencyLower);  % Use upper for Doppler sense
 fd = fb_doppler * 2 * pi;
 velocity = (fd * lambda) / (2 * cosd(AoA));
 
@@ -431,7 +437,7 @@ fprintf('\nRadar Measurement Results:\n');
 fprintf('----------------------------\n');
 fprintf('Estimated Beat Frequency: %.2f kHz\n', fb * 1e-3);
 fprintf('Estimated Doppler Frequency: %.2f Hz\n', fd);
-fprintf('Estimated Range: %.2f m (%.2f ft)\n', range_fb, range_fb_ft);
+fprintf('Estimated Range: %.2f m (%.2f ft)\n', range, range_ft);
 fprintf('Estimated Velocity: %.2f m/s\n', velocity);
 fprintf('Estimated Angle: %.2f degrees\n', AoA);
 fprintf('----------------------------\n');
@@ -469,6 +475,10 @@ intensityKernel = intensityKernel / max(intensityKernel(:));  % normalize peak t
 [~, rangeIdx2] = min(abs(range_axis - range_fb_ft));
 [~, angleIdx2] = min(abs(thetaScan - AoA)); % Same AoA
 
+% Average estimated range
+[~, rangeIdx3] = min(abs(range_axis - range_ft));
+[~, angleIdx3] = min(abs(thetaScan - AoA)); % Same AoA
+
 % Place both kernels
 for i = -halfSize:halfSize
     for j = -halfSize:halfSize
@@ -486,6 +496,14 @@ for i = -halfSize:halfSize
         if ri2 > 0 && ri2 <= size(TargetMap, 1) && ai2 > 0 && ai2 <= size(TargetMap, 2)
             TargetMap(ri2, ai2) = TargetMap(ri2, ai2) + intensityKernel(i + halfSize + 1, j + halfSize + 1); % weight = 0.6
         end
+
+        % Frequency-domain kernel
+        ri3 = rangeIdx3 + i;
+        ai3 = angleIdx3 + j;
+        if ri3 > 0 && ri3 <= size(TargetMap, 1) && ai3 > 0 && ai3 <= size(TargetMap, 2)
+            TargetMap(ri3, ai3) = TargetMap(ri3, ai3) + intensityKernel(i + halfSize + 1, j + halfSize + 1); % weight = 0.6
+        end
+
     end
 end
 
