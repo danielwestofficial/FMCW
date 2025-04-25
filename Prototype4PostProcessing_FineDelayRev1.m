@@ -269,15 +269,15 @@ beatSignal2 = beatSignal2 .* exp(-1j * 2 * pi * u * t * tau_system2);
 % The result is the beat frequency fb which is used later in the script to obtain the range and velocity.
 
 % FFT
-N = 2^24; % Resolution (24 is rather high but acheives very good results)
-f = (-N/2:N/2-1) * (Fs / N); % Frequency vector for plotting
-beatFFT1 = fftshift(fft(beatSignal1, N));
-beatFFT2 = fftshift(fft(beatSignal2, N));
+Nfft = 2^24; % Resolution (24 is rather high but acheives very good results)
+f_beat = (-Nfft/2:Nfft/2-1) * (Fs / Nfft); % Frequency vector for plotting
+beatFFT1 = fftshift(fft(beatSignal1, Nfft));
+beatFFT2 = fftshift(fft(beatSignal2, Nfft));
 
 % Plot Spectrums
 figure('Color', [1 1 1]);
 subplot(2,1,1);
-plot(f/1e6, 20*log10(abs(beatFFT1)));                   % Plot in MHz
+plot(f_beat/1e6, 20*log10(abs(beatFFT1)));                   % Plot in MHz
 title('Beat Frequency Spectrum - Element 1');
 xlabel('Frequency (MHz)');
 xlim([-5 5]);
@@ -285,7 +285,7 @@ ylabel('Magnitude (dB)');
 ylim([-10 60]);
 grid on;
 subplot(2,1,2);
-plot(f/1e6, 20*log10(abs(beatFFT2)));                  
+plot(f_beat/1e6, 20*log10(abs(beatFFT2)));                  
 title('Beat Frequency Spectrum - Element 2');
 xlabel('Frequency (MHz)');
 xlim([-5 5]);
@@ -385,26 +385,41 @@ end
 %% Range and Velocity Calculations
 
 % Split FFT into positive and negative halves
-beatFFT1_pos = abs(beatFFT1(N/2+1:end));  % positive freqs
-beatFFT1_neg = abs(beatFFT1(1:N/2));      % negative freqs
-
-% Find max values and indices
-[max_val_pos, idxPos] = max(beatFFT1_pos);
-[max_val_neg, idxNeg] = max(beatFFT1_neg);
+beatFFT1_pos = abs(beatFFT1(Nfft/2+1:end));  % positive freqs
+beatFFT1_neg = abs(beatFFT1(1:Nfft/2));      % negative freqs
+[max_val_pos1, idxPos1] = max(beatFFT1_pos);
+[max_val_neg1, idxNeg1] = max(beatFFT1_neg);
+beatFFT2 = fftshift(fft(beatSignal2, Nfft));
+beatFFT2_pos = abs(beatFFT2(Nfft/2+1:end));
+beatFFT2_neg = abs(beatFFT2(1:Nfft/2));
+[max_val_pos2, idxPos2] = max(beatFFT2_pos);
+[max_val_neg2, idxNeg2] = max(beatFFT2_neg);
 
 % Map indices to frequency bins
-BeatFrequencyUpper = f(N/2 + idxPos);
-BeatFrequencyLower = f(idxNeg);
+BeatFrequencyUpper1 = f_beat(Nfft/2 + idxPos1);
+BeatFrequencyLower1 = f_beat(idxNeg1);
+BeatFrequencyUpper2 = f_beat(Nfft/2 + idxPos2);
+BeatFrequencyLower2 = f_beat(idxNeg2);
 
-% Choose the stronger peak
-if max_val_pos >= max_val_neg
-    fb = abs(BeatFrequencyUpper);
+if max_val_pos1 >= max_val_neg1
+    fb1 = abs(f_beat(Nfft/2 + idxPos1));
 else
-    fb = abs(BeatFrequencyLower);
+    fb1 = abs(f_beat(idxNeg1));
 end
 
-fprintf('Upper Beat Frequency: %.2f Hz\n', BeatFrequencyUpper);
-fprintf('Lower Beat Frequency: %.2f Hz\n', BeatFrequencyLower);
+if max_val_pos2 >= max_val_neg2
+    fb2 = abs(f_beat(Nfft/2 + idxPos2));
+else
+    fb2 = abs(f_beat(idxNeg2));
+end
+
+%fb = fb1;
+fb = (fb1 + fb2) / 2;
+
+fprintf('Upper Beat Frequency: %.2f Hz\n', BeatFrequencyUpper1);
+fprintf('Lower Beat Frequency: %.2f Hz\n', BeatFrequencyLower1);
+fprintf('Upper Beat Frequency: %.2f Hz\n', BeatFrequencyUpper2);
+fprintf('Lower Beat Frequency: %.2f Hz\n', BeatFrequencyLower2);
 
 tau_from_fb = fb / u;              % time delay (seconds)
 range_fb = (c * tau_from_fb) / 2;  % one-way range (meters)
@@ -422,10 +437,10 @@ fprintf('Estimated Range: %.3f m (%.3f ft)\n', range_fb, range_fb_ft);
 %% Doppler and Velocity Estimation
 
 % Choose the stronger peak
-if fb == BeatFrequencyLower
-    fb_doppler = abs(BeatFrequencyUpper);
+if fb == BeatFrequencyLower1
+    fb_doppler = abs(BeatFrequencyUpper1);
 else
-    fb_doppler = abs(BeatFrequencyLower);
+    fb_doppler = abs(BeatFrequencyLower1);
 end
 
 %fb_doppler = abs(BeatFrequencyLower);  % Use upper for Doppler sense
@@ -518,3 +533,4 @@ colorbar; % shows intensity scale
 clim([0 1]); % Forces max intensity
 grid on;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
