@@ -16,8 +16,8 @@ fo = (frequencyStart + frequencyEnd)/2;
 tau =10e-6;
 u = BW / tau;
 
-sti = load_sc16q11_MIMO('R:\Temp\transmit12.sc16q11', 2);
-sri = load_sc16q11_MIMO('R:\Temp\receive12.sc16q11', 2);
+sti = load_sc16q11_MIMO('R:\Temp\transmit.sc16q11', 2);
+sri = load_sc16q11_MIMO('R:\Temp\receive.sc16q11', 2);
 
 % Align samples 
 if length(sti) > length(sri)
@@ -533,4 +533,3 @@ colorbar; % shows intensity scale
 clim([0 1]); % Forces max intensity
 grid on;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
