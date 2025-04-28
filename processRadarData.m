@@ -9,6 +9,7 @@ function [td, range_td_ft, tau_from_fb, range_fb_ft, range_ft, ...
 
 % Radar Parameters
 Fs = 60e6;
+Ts = 1/Fs;
 BW = 30e6;
 frequencyStart = 2.45e9 - BW/2;
 frequencyEnd = 2.45e9 + BW/2;
@@ -79,7 +80,7 @@ range_td_ft = range_td * 3.28084;
 beatSignal1 = sti(:,1) .* conj(sri(:,1));
 beatSignal2 = sti(:,2) .* conj(sri(:,2));
 
-%td_residual = Ts - abs(td_Phase) - tdCH1_Fine;        % Attemots to account for residual fine delay errors
+%td_residual = Ts - abs(td_Phase) - tdCH1_Fine;        % Attempts to account for residual fine delay errors
 %tau_system1 = systemDelaySamplesCH1/Fs - td_residual;
 %tau_system2 = systemDelaySamplesCH2/Fs - td_residual;
 
@@ -87,7 +88,7 @@ tau_system1 = systemDelaySamplesCH1/Fs - 1.1295e-08; % Most accurate
 tau_system2 = systemDelaySamplesCH2/Fs - 1.1295e-08;
 
 %tau_system1 = (startIdxCH1_Coarse) / Fs + tdCH1_Fine; % These two line are needed when calibrating with 1 ft loopback test 
-%tau_system2 = (startIdxCH2_Coarse) / Fs 
+%tau_system2 = (startIdxCH2_Coarse) / Fs + tdCH2_Fine; 
 
 t = (0:length(beatSignal1)-1).' / Fs;
 beatSignal1 = beatSignal1 .* exp(-1j * 2 * pi * u * t * tau_system1);
@@ -118,8 +119,8 @@ else
     fb2 = abs(f_beat(idxNeg2));
 end
 
-%fb = fb2;              % To calibrate check fb1 and fb2 with 1ft cable
-fb = (fb1 + fb2) / 2;
+fb = fb1;              % To calibrate check fb1 and fb2 with 1ft cable
+%fb = (fb1 + fb2) / 2;
 
 tau_from_fb = fb / u;
 range_fb = (c * tau_from_fb) / 2;
